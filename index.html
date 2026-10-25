@@ -241,6 +241,7 @@ function isbnNorm(s){s=isbnClean(s);if(s.length===10)return isbn10to13(s);return
 // ================= RICERCA DATI (Google Books, poi Open Library) =================
 async function getJ(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.json()}
 // Google Books senza chiave ha un limite giornaliero condiviso da tutti: se e' esaurito lo salto per un'ora
+const GKEY="AIzaSyAYrFA_wU9-hyj39n79xiJaib3e7-Jf-UE"; // chiave Books API di Luca (progetto Google Cloud "libreria"), valida solo da lucaesposti.github.io e localhost:8791
 let GQUOTA=+K("gq")||0;
 const need=o=>!o.titolo||!o.autori||!o.autori.length||!o.copertina||!o.editore;
 // copertina Amazon dall'ISBN-10 (se non esiste arriva un'immagine 1x1, che cover() scarta)
@@ -256,7 +257,7 @@ async function lookup(isbn){const o={};
    o.pagine=o.pagine||v.number_of_pages_median;if(!o.copertina&&v.cover_i)o.copertina="https://covers.openlibrary.org/b/id/"+v.cover_i+"-M.jpg"}}catch(e){}
  // 3) Google Books per completare (trama, editore, copertina), se ha ancora quota
  if(need(o)&&Date.now()-GQUOTA>36e5){
-  try{const r=await fetch("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn);
+  try{const r=await fetch("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn+"&key="+GKEY);
    if(r.status===429||r.status===403){GQUOTA=Date.now();K("gq",GQUOTA)}
    else if(r.ok){const it=((await r.json()).items||[])[0];
     if(it){const v=it.volumeInfo||{};o.titolo=o.titolo||v.title;o.sottotitolo=o.sottotitolo||v.subtitle;if(!o.autori||!o.autori.length)o.autori=v.authors;o.editore=o.editore||v.publisher;
