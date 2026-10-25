@@ -257,9 +257,13 @@ async function lookup(isbn){const o={};
    o.pagine=o.pagine||v.number_of_pages_median;if(!o.copertina&&v.cover_i)o.copertina="https://covers.openlibrary.org/b/id/"+v.cover_i+"-M.jpg"}}catch(e){}
  // 3) Google Books per completare (trama, editore, copertina), se ha ancora quota
  if(need(o)&&Date.now()-GQUOTA>36e5){
-  try{const r=await fetch("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn+"&key="+GKEY);
-   if(r.status===429||r.status===403){GQUOTA=Date.now();K("gq",GQUOTA)}
-   else if(r.ok){const it=((await r.json()).items||[])[0];
+  // da ott. 2026 Google risponde spesso 503 e "isbn:" a volte da' 0 risultati: riprova con varianti
+  try{let it;for(const q of ["isbn:"+isbn,isbn,"isbn:"+isbn,isbn]){
+    const r=await fetch("https://www.googleapis.com/books/v1/volumes?q="+q+"&country=US&key="+GKEY);
+    if(r.status===429||r.status===403){GQUOTA=Date.now();K("gq",GQUOTA);break}
+    if(r.ok){it=((await r.json()).items||[])[0];if(it)break}
+    await new Promise(s=>setTimeout(s,800))}
+   {
     if(it){const v=it.volumeInfo||{};o.titolo=o.titolo||v.title;o.sottotitolo=o.sottotitolo||v.subtitle;if(!o.autori||!o.autori.length)o.autori=v.authors;o.editore=o.editore||v.publisher;
      o.anno=o.anno||(v.publishedDate||"").slice(0,4);o.pagine=o.pagine||v.pageCount;o.lingua=v.language;o.descrizione=v.description;
      const im=v.imageLinks||{},u=im.thumbnail||im.smallThumbnail;if(!o.copertina&&u)o.copertina=u.replace(/^http:/,"https:").replace("&edge=curl","")}}}catch(e){}}
