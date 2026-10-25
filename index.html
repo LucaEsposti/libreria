@@ -230,7 +230,7 @@ const PAL=["#8c3b2e","#2e5e8c","#3f7a4d","#7a4d8c","#8c6a2e","#2e7a7a","#5c4b3f"
 function cover(b,cls){const ini=(b.titolo||"?").replace(/^(il|lo|la|i|gli|le|l'|un|uno|una|the|a)\s+/i,"").slice(0,2).toUpperCase();
  const col=PAL[[...(b.titolo||"?")].reduce((a,c)=>a+c.charCodeAt(0),0)%PAL.length];
  const ph=`<div class="cvp ${cls||""}" style="background:${col}">${esc(ini)}</div>`;
- return b.copertina?`<img class="cv ${cls||""}" src="${esc(b.copertina)}" alt="" loading="lazy" onerror="this.outerHTML=this.dataset.ph" data-ph="${esc(ph)}">`:ph}
+ return b.copertina?`<img class="cv ${cls||""}" src="${esc(b.copertina)}" alt="" loading="lazy" onerror="this.outerHTML=this.dataset.ph" onload="if(this.naturalWidth<5)this.outerHTML=this.dataset.ph" data-ph="${esc(ph)}">`:ph}
 // ISBN: pulizia, controllo, ISBN-10 -> 13
 function isbnClean(s){return String(s||"").toUpperCase().replace(/[^0-9X]/g,"")}
 function isbn13ok(s){if(!/^97[89]\d{10}$/.test(s))return false;let t=0;for(let i=0;i<12;i++)t+=(+s[i])*(i%2?3:1);return (10-t%10)%10===+s[12]}
@@ -240,15 +240,36 @@ function isbnNorm(s){s=isbnClean(s);if(s.length===10)return isbn10to13(s);return
 
 // ================= RICERCA DATI (Google Books, poi Open Library) =================
 async function getJ(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.json()}
+// Google Books senza chiave ha un limite giornaliero condiviso da tutti: se e' esaurito lo salto per un'ora
+let GQUOTA=+K("gq")||0;
+const need=o=>!o.titolo||!o.autori||!o.autori.length||!o.copertina||!o.editore;
+// copertina Amazon dall'ISBN-10 (se non esiste arriva un'immagine 1x1, che cover() scarta)
+function amazonCover(isbn){if(!/^978\d{10}$/.test(isbn))return "";const s=isbn.slice(3,12);let t=0;for(let i=0;i<9;i++)t+=(10-i)*(+s[i]);const c=(11-t%11)%11;
+ return "https://images-na.ssl-images-amazon.com/images/P/"+s+(c===10?"X":c)+".01.LZZZZZZZ.jpg"}
 async function lookup(isbn){const o={};
- try{const j=await getJ("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn);const it=(j.items||[])[0];
-  if(it){const v=it.volumeInfo||{};o.titolo=v.title;o.sottotitolo=v.subtitle;o.autori=v.authors;o.editore=v.publisher;o.anno=(v.publishedDate||"").slice(0,4);o.pagine=v.pageCount;o.lingua=v.language;
-   o.descrizione=v.description;const im=v.imageLinks||{};const u=im.thumbnail||im.smallThumbnail;if(u)o.copertina=u.replace(/^http:/,"https:").replace("&edge=curl","")}}catch(e){o._err=1}
- if(!o.titolo||!o.autori||!o.copertina||!o.editore){
+ // 1) Open Library, scheda di QUESTA edizione: titolo, editore, anno e copertina giusti (non quelli di altre edizioni o traduzioni)
+ try{const e=await getJ("https://openlibrary.org/isbn/"+isbn+".json");o.titolo=e.title;o.sottotitolo=e.subtitle;o.editore=(e.publishers||[])[0];
+  const m=String(e.publish_date||"").match(/\d{4}/);if(m)o.anno=m[0];o.pagine=e.number_of_pages;const cv=(e.covers||[]).find(c=>c>0);if(cv)o.copertina="https://covers.openlibrary.org/b/id/"+cv+"-M.jpg"}catch(e){}
+ // 2) Open Library, ricerca per ISBN: nomi degli autori (e il resto se manca la scheda dell'edizione)
+ try{const j=await getJ("https://openlibrary.org/search.json?isbn="+isbn+"&fields=title,subtitle,author_name,publisher,publish_year,number_of_pages_median,cover_i");const v=(j.docs||[])[0];
+  if(v){o.titolo=o.titolo||v.title;o.sottotitolo=o.sottotitolo||v.subtitle;o.autori=v.author_name;o.editore=o.editore||(v.publisher||[])[0];
+   o.pagine=o.pagine||v.number_of_pages_median;if(!o.copertina&&v.cover_i)o.copertina="https://covers.openlibrary.org/b/id/"+v.cover_i+"-M.jpg"}}catch(e){}
+ // 3) Google Books per completare (trama, editore, copertina), se ha ancora quota
+ if(need(o)&&Date.now()-GQUOTA>36e5){
+  try{const r=await fetch("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn);
+   if(r.status===429||r.status===403){GQUOTA=Date.now();K("gq",GQUOTA)}
+   else if(r.ok){const it=((await r.json()).items||[])[0];
+    if(it){const v=it.volumeInfo||{};o.titolo=o.titolo||v.title;o.sottotitolo=o.sottotitolo||v.subtitle;if(!o.autori||!o.autori.length)o.autori=v.authors;o.editore=o.editore||v.publisher;
+     o.anno=o.anno||(v.publishedDate||"").slice(0,4);o.pagine=o.pagine||v.pageCount;o.lingua=v.language;o.descrizione=v.description;
+     const im=v.imageLinks||{},u=im.thumbnail||im.smallThumbnail;if(!o.copertina&&u)o.copertina=u.replace(/^http:/,"https:").replace("&edge=curl","")}}}catch(e){}}
+ // 4) Open Library, vecchia API dei libri (a volte ha dati che le altre non hanno)
+ if(need(o)){
   try{const j=await getJ("https://openlibrary.org/api/books?format=json&jscmd=data&bibkeys=ISBN:"+isbn),v=j["ISBN:"+isbn];
-   if(v){o.titolo=o.titolo||v.title;o.sottotitolo=o.sottotitolo||v.subtitle;if(!o.autori&&v.authors)o.autori=v.authors.map(a=>a.name);
+   if(v){o.titolo=o.titolo||v.title;o.sottotitolo=o.sottotitolo||v.subtitle;if((!o.autori||!o.autori.length)&&v.authors)o.autori=v.authors.map(a=>a.name);
     if(!o.editore&&v.publishers)o.editore=v.publishers.map(p=>p.name).join(", ");if(!o.anno&&v.publish_date){const m=String(v.publish_date).match(/\d{4}/);if(m)o.anno=m[0]}
-    o.pagine=o.pagine||v.number_of_pages;if(!o.copertina&&v.cover)o.copertina=(v.cover.medium||v.cover.large||v.cover.small||"").replace(/^http:/,"https:")}}catch(e){o._err=(o._err||0)+1}}
+    o.pagine=o.pagine||v.number_of_pages;if(!o.copertina&&v.cover)o.copertina=(v.cover.medium||v.cover.large||v.cover.small||"").replace(/^http:/,"https:")}}catch(e){}}
+ // 5) copertina di riserva
+ if(!o.copertina)o.copertina=amazonCover(isbn);
  return o}
 function fill(b,o){["titolo","sottotitolo","autori","editore","anno","pagine","lingua","descrizione","copertina"].forEach(k=>{if(o[k]&&(!b[k]||(Array.isArray(b[k])&&!b[k].length)))b[k]=o[k]});b.completo=!!b.titolo;return b}
 
@@ -423,7 +444,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button,[da
  else if(t.id==="bksave")backup();
  else if(t.id==="bkload")$("#bkfile").click();
  else if(t.id==="csv")csvOut();
- else if(t.id==="fix"){Q.push(...LIB.filter(b=>!b.completo&&b.isbn).map(b=>b.id));runQ();toast("Cerco i dati mancanti…")}
+ else if(t.id==="fix"){Q.push(...LIB.filter(b=>(!b.completo||!b.copertina)&&b.isbn).map(b=>b.id));runQ();toast("Cerco i dati mancanti…")}
  else if(t.id==="wipe"){if(confirm("Cancellare TUTTI i libri da questo iPhone?")&&confirm("Sicuro? Senza un backup non si recuperano.")){await tx("readwrite",s=>s.clear());LIB=[];BY={};K("dirty",0);refresh();drawAltro();toast("Tutto cancellato")}}
 });
 $("#sheet").addEventListener("click",e=>{if(e.target.id==="sheet"){const b=BY[OPEN];if(b&&!b.titolo&&!b.isbn&&!b.modificato){delete BY[b.id];LIB=LIB.filter(x=>x!==b)}closeBook()}});
@@ -439,7 +460,7 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden)camStop()})
  try{db=await idb();LIB=await dbAll();LIB.forEach(b=>BY[b.id]=b)}catch(e){toast("Impossibile aprire il database: "+esc(e.message),"err",8000)}
  drawPos();drawWarn();
  if(navigator.storage&&navigator.storage.persist){const p=await navigator.storage.persist().catch(()=>false);$("#persist").textContent=p?"Archivio protetto dalla pulizia automatica di iOS.":""}
- Q.push(...LIB.filter(b=>!b.completo&&b.isbn).map(b=>b.id));runQ();
+ Q.push(...LIB.filter(b=>(!b.completo||!b.copertina)&&b.isbn).map(b=>b.id));runQ(); // anche i libri senza copertina
  if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 })();
 </script>
