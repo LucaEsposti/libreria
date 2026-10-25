@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Libreria</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Libreria">
+<meta name="theme-color" content="#f6f1e9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16130f" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{--bg:#f6f1e9;--card:#fffdf9;--ink:#2a2420;--mut:#8a7f74;--line:#e8dfd2;--acc:#b4532a;--acc2:#f6e3d8;--ok:#2f8a5b;--bad:#c2410c;--sh:0 4px 18px rgba(60,40,20,.08);
+ --top:env(safe-area-inset-top,0px);--bot:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#16130f;--card:#221d18;--ink:#f3ece3;--mut:#a39686;--line:#352d25;--acc:#e07a4b;--acc2:#3b2619;--sh:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:16px}
+body{padding:calc(var(--top) + 8px) 0 calc(var(--bot) + 76px)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1{font-size:30px;margin:6px 16px 10px;letter-spacing:-.6px;font-family:"New York",Georgia,serif}
+.sub{color:var(--mut);font-size:13px;margin:-6px 16px 12px}
+.view{display:none}.view.on{display:block}
+/* barra in basso */
+#tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:color-mix(in srgb,var(--card) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 4px calc(var(--bot) + 6px);z-index:20}
+#tabs button{flex:1;border:0;background:none;color:var(--mut);font-size:11px;font-weight:600;padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:2px}
+#tabs button i{font-style:normal;font-size:22px;line-height:1.1;filter:grayscale(1);opacity:.6}
+#tabs button.on{color:var(--acc)}#tabs button.on i{filter:none;opacity:1}
+/* card e controlli */
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh);margin:0 16px 12px;padding:14px}
+.card h3{margin:0 0 8px;font-size:13px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.btn{border:0;border-radius:14px;padding:13px 16px;font-weight:600;background:var(--acc2);color:var(--acc);width:100%}
+.btn.p{background:var(--acc);color:#fff}
+.btn.d{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.45}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.in{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);outline:none}
+.in:focus{border-color:var(--acc)}
+label.l{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:10px 0 4px}
+.muted{color:var(--mut);font-size:13px;line-height:1.4}
+/* scanner */
+#cam{position:relative;margin:0 16px 12px;border-radius:20px;overflow:hidden;background:#000;aspect-ratio:4/3}
+#reader{width:100%;height:100%}
+#reader video{width:100%!important;height:100%!important;object-fit:cover}
+#reader img,#reader__dashboard,#reader__header_message{display:none!important}
+#cam .frame{position:absolute;left:12%;right:12%;top:34%;bottom:34%;border:3px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35);pointer-events:none;transition:border-color .2s}
+#cam .frame.hit{border-color:#3ddc84}#cam .frame.dup{border-color:#ffb020}
+#cam .msg{position:absolute;left:0;right:0;bottom:10px;text-align:center;color:#fff;font-size:13px;text-shadow:0 1px 3px #000}
+#cam .off{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:12px;padding:20px;text-align:center}
+#cam .off .btn{width:auto;padding:14px 26px}
+#cam.idle .frame,#cam.idle .msg{display:none}
+.pos{display:flex;align-items:center;gap:8px}
+.pos .in{flex:1}
+#recent .it{display:flex;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+#recent .it:first-child{border-top:0}
+/* copertine */
+.cv{width:44px;height:64px;border-radius:5px;object-fit:cover;flex:none;background:var(--line);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.cvp{width:44px;height:64px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;font-family:Georgia,serif;box-shadow:0 1px 3px rgba(0,0,0,.2);text-align:center;line-height:1}
+.it .tx{min-width:0;flex:1}
+.it b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it span{display:block;font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--acc2);color:var(--acc);margin-left:4px;vertical-align:1px}
+.tag.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+/* elenco libri */
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 16px 8px;margin-bottom:4px}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:8px}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;white-space:nowrap}
+.chip.on{border-color:var(--acc);background:var(--acc2);color:var(--acc)}
+.filt{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;font-weight:600}
+.filt button{border:0;background:var(--acc);color:#fff;border-radius:999px;padding:4px 10px;font-size:13px}
+.count{font-size:13px;color:var(--mut);padding:0 16px 6px}
+#list{padding:0 16px}
+#list .it{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 12px 8px 8px;margin-bottom:8px;width:100%;text-align:left;border-collapse:collapse}
+#list.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+#list.grid .gi{border:0;background:none;padding:0;text-align:left}
+#list.grid .gi .cv,#list.grid .gi .cvp{width:100%;height:auto;aspect-ratio:2/3;font-size:18px;padding:6px;border-radius:6px}
+#list.grid .gi b{display:block;font-size:12px;margin-top:5px;line-height:1.25;max-height:2.5em;overflow:hidden}
+#sent{height:40px}
+.empty{text-align:center;color:var(--mut);padding:40px 24px;line-height:1.5}
+.empty i{display:block;font-style:normal;font-size:44px;margin-bottom:8px}
+/* gruppi: autori / editori / posizioni */
+.grp{padding:0 16px}
+.grp .lt{font-size:13px;font-weight:700;color:var(--acc);margin:14px 4px 6px}
+.grp button{display:flex;justify-content:space-between;align-items:center;width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-bottom:6px;text-align:left}
+.grp button span{color:var(--mut);font-size:13px;font-weight:600;margin-left:10px}
+/* scheda libro */
+#sheet{position:fixed;inset:0;background:rgba(20,12,6,.45);z-index:40;display:none;align-items:flex-end;justify-content:center}
+#sheet.on{display:flex}
+#sheet .box{background:var(--card);width:100%;max-width:560px;max-height:calc(100vh - var(--top) - 20px);overflow:auto;border-radius:22px 22px 0 0;padding:10px 18px calc(var(--bot) + 18px);animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
+.hd{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px}
+.hd .cv,.hd .cvp{width:86px;height:128px;font-size:22px;padding:6px}
+.hd h2{margin:0 0 4px;font-size:20px;font-family:"New York",Georgia,serif;line-height:1.2}
+.hd p{margin:0;color:var(--mut);font-size:14px}
+.seg{display:flex;background:var(--bg);border-radius:12px;padding:3px}
+.seg button{flex:1;border:0;background:none;padding:8px 2px;border-radius:9px;font-size:13px;font-weight:600}
+.seg button.on{background:var(--acc);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(var(--bot) + 84px);z-index:50;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+#toast .t{background:var(--ink);color:var(--bg);border-radius:14px;padding:10px 14px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:up .2s ease-out;display:flex;gap:10px;align-items:center}
+#toast .t.dup{background:#a35e00;color:#fff}
+#toast .t.err{background:var(--bad);color:#fff}
+#toast .t .cv,#toast .t .cvp{width:30px;height:44px;font-size:11px}
+.warn{background:var(--acc2);color:var(--acc);border-radius:14px;margin:0 16px 12px;padding:12px 14px;font-size:14px;display:flex;align-items:center;gap:10px}
+.warn button{border:0;background:var(--acc);color:#fff;border-radius:10px;padding:8px 12px;font-weight:600;flex:none}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats b{display:block;font-size:24px;font-family:"New York",Georgia,serif}
+.stats span{font-size:12px;color:var(--mut)}
+.stack>*+*{margin-top:8px}
+</style>
+</head>
+<body>
+
+<!-- ===== SCANSIONA ===== -->
+<section class="view on" id="v-scan">
+ <h1>Scansiona</h1>
+ <div id="warnS"></div>
+ <div id="cam" class="idle">
+  <div id="reader"></div>
+  <div class="frame" id="frame"></div>
+  <div class="msg" id="cmsg">Inquadra il codice a barre sul retro</div>
+  <div class="off" id="camoff"><div style="font-size:44px">📚</div><div>Inquadra uno dopo l'altro i codici a barre (ISBN) sul retro dei libri: titolo, autore e copertina arrivano da soli.</div><button class="btn p" id="camgo">Avvia fotocamera</button></div>
+ </div>
+ <div class="card">
+  <h3>Dove li stai mettendo</h3>
+  <div class="pos"><input class="in" id="poscur" placeholder="es. Salotto, libreria grande, ripiano 3" list="poslist" autocomplete="off"></div>
+  <datalist id="poslist"></datalist>
+  <div class="muted" style="margin-top:6px">I libri scansionati prendono questa posizione. Cambiala quando passi a un altro ripiano.</div>
+ </div>
+ <div class="card">
+  <h3>Senza fotocamera</h3>
+  <div class="row"><input class="in" id="isbnin" inputmode="numeric" placeholder="Scrivi l'ISBN" autocomplete="off"><button class="btn p" id="isbngo" style="flex:none;width:auto">Aggiungi</button></div>
+  <button class="btn" id="manual" style="margin-top:8px">Libro senza codice: inserisci a mano</button>
+ </div>
+ <div class="card" id="recentc" hidden><h3>Appena aggiunti</h3><div id="recent"></div></div>
+</section>
+
+<!-- ===== LIBRI ===== -->
+<section class="view" id="v-libri">
+ <h1>Libri</h1>
+ <div id="warnL"></div>
+ <div class="bar">
+  <input class="in" id="q" type="search" placeholder="Cerca titolo, autore, editore, ISBN…" autocomplete="off">
+  <div class="chips" id="sortc"></div>
+  <div class="chips" id="filtc"></div>
+  <div class="filt" id="facet" hidden></div>
+ </div>
+ <div class="count" id="count"></div>
+ <div id="list"></div>
+ <div id="sent"></div>
+</section>
+
+<!-- ===== AUTORI / EDITORI / POSIZIONI ===== -->
+<section class="view" id="v-gruppi">
+ <h1>Elenchi</h1>
+ <div class="bar">
+  <div class="seg" id="gseg"><button data-g="autori" class="on">Autori</button><button data-g="editori">Editori</button><button data-g="posizioni">Posizioni</button><button data-g="anni">Anni</button></div>
+  <input class="in" id="gq" type="search" placeholder="Cerca…" autocomplete="off" style="margin-top:8px">
+ </div>
+ <div class="grp" id="glist"></div>
+</section>
+
+<!-- ===== ALTRO ===== -->
+<section class="view" id="v-altro">
+ <h1>Altro</h1>
+ <div class="card"><div class="stats" id="stats"></div></div>
+ <div class="card stack">
+  <h3>Backup su iCloud Drive</h3>
+  <div class="muted" id="bkinfo"></div>
+  <button class="btn p" id="bksave">Salva backup</button>
+  <div class="muted">Si apre il menu di condivisione: scegli <b>Salva su File → iCloud Drive</b>. Tieni sempre l'ultimo backup: i libri stanno solo in questo iPhone.</div>
+  <button class="btn" id="bkload">Ripristina da un backup</button>
+  <input type="file" id="bkfile" accept=".json,.csv,application/json,text/csv" hidden>
+ </div>
+ <div class="card stack">
+  <h3>Esporta</h3>
+  <button class="btn" id="csv">Esporta elenco per Excel / Numbers (CSV)</button>
+ </div>
+ <div class="card stack">
+  <h3>Dati</h3>
+  <button class="btn" id="fix">Completa i libri senza dati</button>
+  <div class="muted" id="fixinfo"></div>
+ </div>
+ <div class="card stack">
+  <h3>Informazioni</h3>
+  <div class="muted">Titoli, autori e copertine da Google Books e Open Library. Tutto resta su questo iPhone, nessun account. <span id="persist"></span></div>
+  <button class="btn d" id="wipe">Cancella tutti i libri</button>
+ </div>
+</section>
+
+<nav id="tabs">
+ <button data-v="scan" class="on"><i>📷</i>Scansiona</button>
+ <button data-v="libri"><i>📚</i>Libri</button>
+ <button data-v="gruppi"><i>👤</i>Elenchi</button>
+ <button data-v="altro"><i>⚙️</i>Altro</button>
+</nav>
+
+<div id="sheet"><div class="box" id="sbox"></div></div>
+<div id="toast"></div>
+
+<script src="html5-qrcode.min.js"></script>
+<script>
+"use strict";
+// ================= DATABASE (IndexedDB, solo su questo iPhone) =================
+const DBN="libreria",ST="libri";let db,LIB=[],BY={};
+function idb(){return new Promise((ok,ko)=>{const r=indexedDB.open(DBN,1);r.onupgradeneeded=()=>{r.result.createObjectStore(ST,{keyPath:"id"})};r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)})}
+function tx(mode,fn){return new Promise((ok,ko)=>{const t=db.transaction(ST,mode),s=t.objectStore(ST);const res=fn(s);t.oncomplete=()=>ok(res&&res.result);t.onerror=()=>ko(t.error)})}
+const dbAll=()=>tx("readonly",s=>s.getAll());
+async function dbPut(b){b.modificato=Date.now();await tx("readwrite",s=>s.put(b));if(!BY[b.id])LIB.push(b);BY[b.id]=b;bump();}
+async function dbPutMany(arr){await tx("readwrite",s=>{arr.forEach(b=>s.put(b))});arr.forEach(b=>{if(!BY[b.id])LIB.push(b);BY[b.id]=b});}
+async function dbDel(id){await tx("readwrite",s=>s.delete(id));delete BY[id];LIB=LIB.filter(b=>b.id!==id);bump();}
+// impostazioni (solo comodità: posizione corrente, promemoria backup)
+const K=(k,v)=>{try{if(v===undefined)return localStorage.getItem("lib_"+k);localStorage.setItem("lib_"+k,v)}catch(e){return null}};
+function bump(){K("dirty",(+K("dirty")||0)+1);drawWarn()}
+
+// ================= UTILITA' =================
+const $=s=>document.querySelector(s);
+const esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const coll=new Intl.Collator("it",{sensitivity:"base",numeric:true});
+function toast(html,cls,ms){const t=document.createElement("div");t.className="t "+(cls||"");t.innerHTML=html;$("#toast").appendChild(t);setTimeout(()=>t.remove(),ms||2600)}
+function autori(b){return (b.autori||[]).join(", ")}
+const PAL=["#8c3b2e","#2e5e8c","#3f7a4d","#7a4d8c","#8c6a2e","#2e7a7a","#5c4b3f","#a0522d"];
+function cover(b,cls){const ini=(b.titolo||"?").replace(/^(il|lo|la|i|gli|le|l'|un|uno|una|the|a)\s+/i,"").slice(0,2).toUpperCase();
+ const col=PAL[[...(b.titolo||"?")].reduce((a,c)=>a+c.charCodeAt(0),0)%PAL.length];
+ const ph=`<div class="cvp ${cls||""}" style="background:${col}">${esc(ini)}</div>`;
+ return b.copertina?`<img class="cv ${cls||""}" src="${esc(b.copertina)}" alt="" loading="lazy" onerror="this.outerHTML=this.dataset.ph" data-ph="${esc(ph)}">`:ph}
+// ISBN: pulizia, controllo, ISBN-10 -> 13
+function isbnClean(s){return String(s||"").toUpperCase().replace(/[^0-9X]/g,"")}
+function isbn13ok(s){if(!/^97[89]\d{10}$/.test(s))return false;let t=0;for(let i=0;i<12;i++)t+=(+s[i])*(i%2?3:1);return (10-t%10)%10===+s[12]}
+function isbn10to13(s){if(!/^\d{9}[\dX]$/.test(s))return null;let t=0;for(let i=0;i<10;i++)t+=(s[i]==="X"?10:+s[i])*(10-i);if(t%11)return null;
+ const b="978"+s.slice(0,9);let u=0;for(let i=0;i<12;i++)u+=(+b[i])*(i%2?3:1);return b+((10-u%10)%10)}
+function isbnNorm(s){s=isbnClean(s);if(s.length===10)return isbn10to13(s);return isbn13ok(s)?s:null}
+
+// ================= RICERCA DATI (Google Books, poi Open Library) =================
+async function getJ(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.json()}
+async function lookup(isbn){const o={};
+ try{const j=await getJ("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn);const it=(j.items||[])[0];
+  if(it){const v=it.volumeInfo||{};o.titolo=v.title;o.sottotitolo=v.subtitle;o.autori=v.authors;o.editore=v.publisher;o.anno=(v.publishedDate||"").slice(0,4);o.pagine=v.pageCount;o.lingua=v.language;
+   o.descrizione=v.description;const im=v.imageLinks||{};const u=im.thumbnail||im.smallThumbnail;if(u)o.copertina=u.replace(/^http:/,"https:").replace("&edge=curl","")}}catch(e){o._err=1}
+ if(!o.titolo||!o.autori||!o.copertina||!o.editore){
+  try{const j=await getJ("https://openlibrary.org/api/books?format=json&jscmd=data&bibkeys=ISBN:"+isbn),v=j["ISBN:"+isbn];
+   if(v){o.titolo=o.titolo||v.title;o.sottotitolo=o.sottotitolo||v.subtitle;if(!o.autori&&v.authors)o.autori=v.authors.map(a=>a.name);
+    if(!o.editore&&v.publishers)o.editore=v.publishers.map(p=>p.name).join(", ");if(!o.anno&&v.publish_date){const m=String(v.publish_date).match(/\d{4}/);if(m)o.anno=m[0]}
+    o.pagine=o.pagine||v.number_of_pages;if(!o.copertina&&v.cover)o.copertina=(v.cover.medium||v.cover.large||v.cover.small||"").replace(/^http:/,"https:")}}catch(e){o._err=(o._err||0)+1}}
+ return o}
+function fill(b,o){["titolo","sottotitolo","autori","editore","anno","pagine","lingua","descrizione","copertina"].forEach(k=>{if(o[k]&&(!b[k]||(Array.isArray(b[k])&&!b[k].length)))b[k]=o[k]});b.completo=!!b.titolo;return b}
+
+// ================= AGGIUNTA LIBRI (coda: una ricerca alla volta) =================
+const Q=[];let qRun=false;
+async function addIsbn(isbn,src){
+ if(BY[isbn]){const b=BY[isbn];beep(true);flash("dup");toast(`${cover(b)}<div><b>Ce l'hai già</b><br>${esc(b.titolo||isbn)}${b.posizione?" · "+esc(b.posizione):""}</div>`,"dup",3500);return}
+ const b={id:isbn,isbn,titolo:"",autori:[],posizione:$("#poscur").value.trim(),stato:"",prestato:"",note:"",aggiunto:Date.now(),completo:false};
+ await dbPut(b);beep(false);flash("hit");recent(b);Q.push(isbn);runQ();
+}
+async function runQ(){if(qRun)return;qRun=true;
+ while(Q.length){const id=Q.shift(),b=BY[id];if(!b){continue}
+  if(!navigator.onLine){Q.unshift(id);break}
+  const o=await lookup(b.isbn);fill(b,o);await tx("readwrite",s=>s.put(b));recent(b,true);
+  if(b.titolo)toast(`${cover(b)}<div><b>${esc(b.titolo)}</b><br>${esc(autori(b))}</div>`);
+  else toast(`Nessun dato per ${b.isbn}: completalo a mano dalla lista`,"err",3500);
+  if(CUR==="libri")drawList();await new Promise(r=>setTimeout(r,350))}
+ qRun=false;drawFix()}
+window.addEventListener("online",runQ);
+
+// ================= SCANNER =================
+let scanner=null,lastCode="",lastT=0,actx=null;
+function beep(dup){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();
+ o.frequency.value=dup?330:1320;o.type="sine";g.gain.setValueAtTime(.18,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+(dup?.35:.12));
+ o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+(dup?.35:.12))}catch(e){}}
+function flash(c){const f=$("#frame");f.className="frame "+c;setTimeout(()=>f.className="frame",500)}
+async function camStart(){
+ try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume()}catch(e){}
+ $("#camoff").hidden=true;$("#cam").classList.remove("idle");$("#cmsg").textContent="Avvio fotocamera…";
+ try{scanner=scanner||new Html5Qrcode("reader",{formatsToSupport:[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A],verbose:false,
+   experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+  await scanner.start({facingMode:"environment"},{fps:12,qrbox:(w,h)=>({width:Math.floor(w*.76),height:Math.floor(h*.32)}),disableFlip:true},onCode,()=>{});
+  $("#cmsg").textContent="Inquadra il codice a barre sul retro"}
+ catch(e){$("#camoff").hidden=false;$("#cam").classList.add("idle");toast("Fotocamera non disponibile: consenti l'accesso in Impostazioni → Safari → Fotocamera","err",5000)}}
+function camStop(){if(scanner&&scanner.isScanning){scanner.stop().catch(()=>{})}$("#camoff").hidden=false;$("#cam").classList.add("idle")}
+function onCode(txt){const n=Date.now();if(txt===lastCode&&n-lastT<4000)return;lastCode=txt;lastT=n;
+ const i=isbnNorm(txt);if(!i){if(n-(onCode.w||0)>3000){onCode.w=n;toast("Questo non è un ISBN (codice "+esc(txt)+")","err")}return}addIsbn(i,"cam")}
+let REC=[];
+function recent(b,upd){if(!upd){REC.unshift(b.id);REC=REC.slice(0,8)}if(!REC.includes(b.id))return;
+ $("#recentc").hidden=false;$("#recent").innerHTML=REC.map(id=>{const x=BY[id];if(!x)return"";return `<button class="it" data-open="${esc(id)}" style="border:0;background:none;width:100%;text-align:left;padding:8px 0">${cover(x)}<div class="tx"><b>${esc(x.titolo||"Cerco i dati…")}</b><span>${esc(autori(x)||x.isbn)}${x.posizione?" · "+esc(x.posizione):""}</span></div></button>`}).join("")}
+
+// ================= LISTA LIBRI =================
+let CUR="scan",SORT="titolo",FILT="tutti",FACET=null,SHOWN=0,VIEW=K("view")||"lista",RES=[];
+const SORTS=[["titolo","Titolo"],["autore","Autore"],["anno","Anno"],["recenti","Ultimi aggiunti"],["vista",""]];
+const FILTS=[["tutti","Tutti"],["da leggere","Da leggere"],["in lettura","In lettura"],["letto","Letti"],["prestati","Prestati"],["incompleti","Senza dati"]];
+function cognome(b){const a=(b.autori||[])[0]||"";const p=a.trim().split(/\s+/);return p.length>1?p[p.length-1]+" "+p.slice(0,-1).join(" "):a}
+function drawChips(){
+ $("#sortc").innerHTML=SORTS.map(s=>s[0]==="vista"?`<button class="chip" data-view>${VIEW==="lista"?"▦ Copertine":"☰ Elenco"}</button>`:`<button class="chip ${SORT===s[0]?"on":""}" data-sort="${s[0]}">${s[1]}</button>`).join("");
+ $("#filtc").innerHTML=FILTS.map(f=>`<button class="chip ${FILT===f[0]?"on":""}" data-filt="${f[0]}">${f[1]}</button>`).join("");
+ const fc=$("#facet");if(FACET){fc.hidden=false;fc.innerHTML=`<span>${esc(FACET.l)}: ${esc(FACET.v||"(nessuno)")}</span><button data-unfacet>✕</button>`}else fc.hidden=true}
+function match(b,toks){if(!toks.length)return true;const h=b._h||(b._h=norm([b.titolo,b.sottotitolo,autori(b),b.editore,b.isbn,b.posizione,b.note,b.prestato].join(" ")));return toks.every(t=>h.includes(t))}
+function drawList(){
+ LIB.forEach(b=>delete b._h);
+ const toks=norm($("#q").value).split(/\s+/).filter(Boolean);
+ RES=LIB.filter(b=>{if(FACET&&!FACET.f(b))return false;
+  if(FILT==="prestati"&&!b.prestato)return false;if(FILT==="incompleti"&&b.completo)return false;if(["da leggere","in lettura","letto"].includes(FILT)&&b.stato!==FILT)return false;return match(b,toks)});
+ const last=(x,y)=>(!x)-(!y)||coll.compare(x||"",y||""); // vuoti in fondo
+ const c={titolo:(a,b)=>last(a.titolo,b.titolo),autore:(a,b)=>last(cognome(a),cognome(b))||coll.compare(a.titolo||"",b.titolo||""),
+  anno:(a,b)=>(+b.anno||0)-(+a.anno||0)||coll.compare(a.titolo||"",b.titolo||""),recenti:(a,b)=>b.aggiunto-a.aggiunto}[SORT];RES.sort(c);
+ $("#count").textContent=RES.length===LIB.length?`${LIB.length} libri`:`${RES.length} di ${LIB.length} libri`;
+ const L=$("#list");L.className=VIEW==="griglia"?"grid":"";L.innerHTML="";SHOWN=0;
+ if(!LIB.length){L.innerHTML='<div class="empty"><i>📖</i>Ancora nessun libro.<br>Vai su <b>Scansiona</b> e inquadra il codice a barre sul retro.</div>';return}
+ if(!RES.length){L.innerHTML='<div class="empty"><i>🔎</i>Nessun libro trovato.</div>';return}
+ more()}
+function more(){const L=$("#list"),n=Math.min(RES.length,SHOWN+80);let h="";
+ for(let i=SHOWN;i<n;i++){const b=RES[i];
+  h+=VIEW==="griglia"?`<button class="gi" data-open="${esc(b.id)}">${cover(b)}<b>${esc(b.titolo||b.isbn)}</b></button>`:
+   `<button class="it" data-open="${esc(b.id)}" style="display:flex;gap:12px;align-items:center">${cover(b)}<div class="tx"><b>${esc(b.titolo||"(senza titolo) "+(b.isbn||""))}</b><span>${esc(autori(b)||"Autore sconosciuto")}</span><span>${esc([b.editore,b.anno].filter(Boolean).join(" · "))}${b.stato==="letto"?'<span class="tag ok" style="display:inline-block">letto</span>':b.stato?'<span class="tag" style="display:inline-block">'+esc(b.stato)+'</span>':""}${b.prestato?'<span class="tag" style="display:inline-block">prestato</span>':""}</span></div></button>`}
+ L.insertAdjacentHTML("beforeend",h);SHOWN=n}
+new IntersectionObserver(e=>{if(e[0].isIntersecting&&CUR==="libri"&&SHOWN<RES.length)more()},{rootMargin:"600px"}).observe($("#sent"));
+
+// ================= ELENCHI (autori, editori, posizioni, anni) =================
+let GRP="autori";
+function groups(){const m=new Map();const add=(k,b)=>{k=(k||"").trim();if(!m.has(k))m.set(k,0);m.set(k,m.get(k)+1)};
+ LIB.forEach(b=>{if(GRP==="autori"){(b.autori&&b.autori.length?b.autori:[""]).forEach(a=>add(a,b))}else if(GRP==="editori")add(b.editore,b);else if(GRP==="posizioni")add(b.posizione,b);else add(b.anno,b)});
+ return [...m.entries()]}
+function gKey(n){if(GRP!=="autori")return n;const p=n.trim().split(/\s+/);return p.length>1?p[p.length-1]+" "+p.slice(0,-1).join(" "):n}
+function drawGroups(){const toks=norm($("#gq").value);let g=groups().filter(x=>!toks||norm(x[0]).includes(toks));
+ if(GRP==="anni")g.sort((a,b)=>(+b[0]||0)-(+a[0]||0));else g.sort((a,b)=>(!a[0])-(!b[0])||coll.compare(gKey(a[0]),gKey(b[0])));
+ const none={autori:"Autore sconosciuto",editori:"Editore sconosciuto",posizioni:"Senza posizione",anni:"Anno sconosciuto"}[GRP];
+ let h="",last="";g.forEach(([k,n])=>{if(GRP==="autori"||GRP==="editori"){const L=(norm(gKey(k))[0]||"#").toUpperCase();if(L!==last){h+=`<div class="lt">${esc(L)}</div>`;last=L}}
+  h+=`<button data-grp="${esc(k)}">${esc(GRP==="autori"?k:k)||"<i>"+none+"</i>"}<span>${n}</span></button>`});
+ $("#glist").innerHTML=h||'<div class="empty"><i>📚</i>Niente da mostrare.</div>'}
+function openGroup(k){const lab={autori:"Autore",editori:"Editore",posizioni:"Posizione",anni:"Anno"}[GRP],g=GRP;
+ FACET={l:lab,v:k,f:b=>g==="autori"?(k?(b.autori||[]).includes(k):!(b.autori||[]).length):((g==="editori"?b.editore:g==="posizioni"?b.posizione:b.anno)||"").trim()===k};
+ SORT=g==="autori"?"anno":"autore";$("#q").value="";FILT="tutti";show("libri")}
+
+// ================= SCHEDA LIBRO =================
+let OPEN=null;
+function openBook(id){const b=BY[id];if(!b)return;OPEN=id;const st=["","da leggere","in lettura","letto"];
+ $("#sbox").innerHTML=`<div class="grab"></div><div class="hd">${cover(b)}<div><h2>${esc(b.titolo||"Senza titolo")}</h2><p>${esc(autori(b))}</p><p>${esc([b.editore,b.anno,b.pagine?b.pagine+" pagine":""].filter(Boolean).join(" · "))}</p>${b.isbn?`<p>ISBN ${esc(b.isbn)}</p>`:""}</div></div>
+ <label class="l">Stato</label><div class="seg" id="fst">${st.map(s=>`<button data-st="${s}" class="${(b.stato||"")===s?"on":""}">${s||"—"}</button>`).join("")}</div>
+ <label class="l">Posizione</label><input class="in" id="fpos" value="${esc(b.posizione)}" list="poslist" placeholder="es. Camera, comodino">
+ <label class="l">Prestato a</label><input class="in" id="fpre" value="${esc(b.prestato)}" placeholder="Nome (vuoto = in casa)">
+ <label class="l">Note</label><textarea class="in" id="fnote" rows="2">${esc(b.note)}</textarea>
+ <details style="margin-top:12px"><summary class="muted" style="font-weight:600">Modifica titolo, autore, editore…</summary>
+  <label class="l">Titolo</label><input class="in" id="ftit" value="${esc(b.titolo)}">
+  <label class="l">Autori (separati da virgola)</label><input class="in" id="faut" value="${esc(autori(b))}">
+  <div class="two"><div><label class="l">Editore</label><input class="in" id="fedi" value="${esc(b.editore)}"></div><div><label class="l">Anno</label><input class="in" id="fann" inputmode="numeric" value="${esc(b.anno)}"></div></div>
+  <label class="l">Indirizzo copertina (facoltativo)</label><input class="in" id="fcov" value="${esc(b.copertina)}">
+  ${b.isbn?'<button class="btn" id="frel" style="margin-top:10px">Cerca di nuovo i dati online</button>':""}
+ </details>
+ ${b.descrizione?`<details style="margin-top:8px"><summary class="muted" style="font-weight:600">Trama</summary><p class="muted">${esc(b.descrizione)}</p></details>`:""}
+ <div class="row" style="margin-top:16px"><button class="btn d" id="fdel">Elimina</button><button class="btn p" id="fsave">Salva</button></div>`;
+ $("#sheet").classList.add("on")}
+function closeBook(){$("#sheet").classList.remove("on");OPEN=null}
+async function saveBook(){const b=BY[OPEN];if(!b)return;
+ b.stato=($("#fst .on")||{}).dataset?.st||"";b.posizione=$("#fpos").value.trim();b.prestato=$("#fpre").value.trim();b.note=$("#fnote").value.trim();
+ b.titolo=$("#ftit").value.trim();b.autori=$("#faut").value.split(",").map(s=>s.trim()).filter(Boolean);b.editore=$("#fedi").value.trim();b.anno=$("#fann").value.trim();b.copertina=$("#fcov").value.trim();
+ b.completo=!!b.titolo;await dbPut(b);closeBook();refresh();toast("Salvato")}
+function manualNew(){const id="m"+Date.now();const b={id,isbn:"",titolo:"",autori:[],posizione:$("#poscur").value.trim(),stato:"",prestato:"",note:"",aggiunto:Date.now(),completo:false};
+ BY[id]=b;LIB.push(b);openBook(id);$("#sbox details").open=true;$("#ftit").focus()}
+
+// ================= BACKUP / CSV =================
+function fname(ext){const d=new Date(),p=n=>String(n).padStart(2,"0");return `libreria-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}.${ext}`}
+async function shareFile(name,text,type){const f=new File([text],name,{type});
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return true}catch(e){if(e.name==="AbortError")return false}}
+ const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);return true}
+async function backup(){const data=LIB.filter(b=>b.titolo||b.isbn).map(b=>{const o={...b};delete o._h;return o});
+ const ok=await shareFile(fname("json"),JSON.stringify({app:"libreria",versione:1,data:new Date().toISOString(),libri:data}),"application/json");
+ if(ok){K("bk",Date.now());K("dirty",0);drawWarn();drawAltro();toast("Backup pronto: salvalo in iCloud Drive")}}
+const COLS=[["isbn","ISBN"],["titolo","Titolo"],["autori","Autori"],["editore","Editore"],["anno","Anno"],["pagine","Pagine"],["posizione","Posizione"],["stato","Stato"],["prestato","Prestato a"],["note","Note"]];
+function csvOut(){const q=v=>{v=Array.isArray(v)?v.join(", "):String(v==null?"":v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+ const rows=[COLS.map(c=>c[1]).join(";")].concat([...LIB].sort((a,b)=>coll.compare(cognome(a)||"~",cognome(b)||"~")).map(b=>COLS.map(c=>q(b[c[0]])).join(";")));
+ shareFile(fname("csv"),"﻿"+rows.join("\n"),"text/csv")}
+function csvParse(t){t=t.replace(/^﻿/,"");const sep=(t.split("\n")[0].match(/;/g)||[]).length>=(t.split("\n")[0].match(/,/g)||[]).length?";":",";const R=[];let row=[],f="",q=false;
+ for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===sep){row.push(f);f=""}else if(c==="\n"){row.push(f.replace(/\r$/,""));R.push(row);row=[];f=""}else f+=c}
+ if(f||row.length){row.push(f);R.push(row)}const H=R.shift().map(h=>h.trim().toLowerCase());
+ return R.filter(r=>r.some(x=>x.trim())).map(r=>{const b={};COLS.forEach(([k,l])=>{const i=H.indexOf(l.toLowerCase());if(i>=0)b[k]=(r[i]||"").trim()});
+  b.autori=b.autori?b.autori.split(",").map(s=>s.trim()).filter(Boolean):[];b.isbn=isbnNorm(b.isbn)||"";b.id=b.isbn||"m"+Date.now()+Math.random().toString(36).slice(2,6);b.aggiunto=Date.now();b.completo=!!b.titolo;return b})}
+async function restore(file){const t=await file.text();let arr;
+ try{if(/^\s*\{/.test(t)){const j=JSON.parse(t);arr=j.libri||[]}else arr=csvParse(t)}catch(e){toast("File non valido","err");return}
+ if(!arr.length){toast("Nessun libro nel file","err");return}
+ let nuovi=0,agg=0;const put=[];arr.forEach(b=>{if(!b.id)return;const old=BY[b.id];if(!old){nuovi++;put.push(b)}else if((b.modificato||0)>(old.modificato||0)){agg++;put.push(b)}});
+ if(!confirm(`Nel backup ci sono ${arr.length} libri: ${nuovi} nuovi e ${agg} più aggiornati di quelli che hai. Li aggiungo? (Gli altri restano come sono.)`))return;
+ await dbPutMany(put);refresh();toast(`Fatto: ${nuovi} aggiunti, ${agg} aggiornati`);Q.push(...put.filter(b=>!b.completo&&b.isbn).map(b=>b.id));runQ()}
+
+// ================= PROMEMORIA BACKUP =================
+function drawWarn(){const d=+K("dirty")||0,bk=+K("bk")||0,days=bk?(Date.now()-bk)/864e5:999;
+ const show=LIB.length&&(d>=30||(d>0&&days>7));
+ const h=show?`<div class="warn"><div style="flex:1">${d} modifiche dall'ultimo backup${bk?"":" (non l'hai mai fatto)"}.</div><button data-bk>Salva backup</button></div>`:"";
+ $("#warnS").innerHTML=h;$("#warnL").innerHTML=h}
+
+// ================= ALTRO =================
+function drawAltro(){const a=new Set();LIB.forEach(b=>(b.autori||[]).forEach(x=>a.add(x)));
+ $("#stats").innerHTML=`<div><b>${LIB.length}</b><span>libri</span></div><div><b>${a.size}</b><span>autori</span></div><div><b>${LIB.filter(b=>b.stato==="letto").length}</b><span>letti</span></div>`;
+ const bk=+K("bk");$("#bkinfo").innerHTML=bk?`Ultimo backup: <b>${new Date(bk).toLocaleString("it-IT",{dateStyle:"medium",timeStyle:"short"})}</b> · modifiche da allora: <b>${+K("dirty")||0}</b>`:"<b>Nessun backup ancora.</b>";drawFix()}
+function drawFix(){const n=LIB.filter(b=>!b.completo&&b.isbn).length;const el=$("#fixinfo");if(el)el.textContent=n?`${n} libri senza titolo (es. scansionati senza internet).`:"Tutti i libri hanno i dati.";const f=$("#fix");if(f)f.disabled=!n}
+function drawPos(){const s=new Set(LIB.map(b=>b.posizione).filter(Boolean));$("#poslist").innerHTML=[...s].sort(coll.compare).map(p=>`<option value="${esc(p)}">`).join("")}
+
+// ================= NAVIGAZIONE E EVENTI =================
+function show(v){CUR=v;document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+ if(v!=="scan")camStop();if(v==="libri"){drawChips();drawList()}if(v==="gruppi")drawGroups();if(v==="altro")drawAltro();scrollTo(0,0)}
+function refresh(){drawPos();drawWarn();if(CUR==="libri"){drawChips();drawList()}if(CUR==="gruppi")drawGroups();if(CUR==="altro")drawAltro();REC.length&&recent({id:REC[0]},true)}
+document.addEventListener("click",async e=>{const t=e.target.closest("button,[data-open]");if(!t)return;const d=t.dataset;
+ if(d.v)show(d.v);
+ else if(d.open!==undefined)openBook(d.open);
+ else if(d.sort){SORT=d.sort;drawChips();drawList()}
+ else if(d.view!==undefined){VIEW=VIEW==="lista"?"griglia":"lista";K("view",VIEW);drawChips();drawList()}
+ else if(d.filt){FILT=d.filt;drawChips();drawList()}
+ else if(d.unfacet!==undefined){FACET=null;drawChips();drawList()}
+ else if(d.grp!==undefined)openGroup(d.grp);
+ else if(d.g){GRP=d.g;document.querySelectorAll("#gseg button").forEach(b=>b.classList.toggle("on",b===t));$("#gq").value="";drawGroups()}
+ else if(d.st!==undefined){document.querySelectorAll("#fst button").forEach(b=>b.classList.toggle("on",b===t))}
+ else if(d.bk!==undefined)backup();
+ else if(t.id==="camgo")camStart();
+ else if(t.id==="fsave")saveBook();
+ else if(t.id==="fdel"){const b=BY[OPEN];if(b&&confirm(`Eliminare "${b.titolo||b.isbn||"questo libro"}"?`)){await dbDel(OPEN);closeBook();refresh()}}
+ else if(t.id==="frel"){const b=BY[OPEN];t.textContent="Cerco…";const o=await lookup(b.isbn);["titolo","sottotitolo","autori","editore","anno","pagine","copertina","descrizione"].forEach(k=>{if(o[k])b[k]=o[k]});b.completo=!!b.titolo;await dbPut(b);openBook(b.id);refresh()}
+ else if(t.id==="isbngo"){const i=isbnNorm($("#isbnin").value);if(!i){toast("ISBN non valido: controlla le cifre","err");return}$("#isbnin").value="";addIsbn(i,"man")}
+ else if(t.id==="manual")manualNew();
+ else if(t.id==="bksave")backup();
+ else if(t.id==="bkload")$("#bkfile").click();
+ else if(t.id==="csv")csvOut();
+ else if(t.id==="fix"){Q.push(...LIB.filter(b=>!b.completo&&b.isbn).map(b=>b.id));runQ();toast("Cerco i dati mancanti…")}
+ else if(t.id==="wipe"){if(confirm("Cancellare TUTTI i libri da questo iPhone?")&&confirm("Sicuro? Senza un backup non si recuperano.")){await tx("readwrite",s=>s.clear());LIB=[];BY={};K("dirty",0);refresh();drawAltro();toast("Tutto cancellato")}}
+});
+$("#sheet").addEventListener("click",e=>{if(e.target.id==="sheet"){const b=BY[OPEN];if(b&&!b.titolo&&!b.isbn&&!b.modificato){delete BY[b.id];LIB=LIB.filter(x=>x!==b)}closeBook()}});
+$("#bkfile").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)restore(f)});
+let qT;$("#q").addEventListener("input",()=>{clearTimeout(qT);qT=setTimeout(drawList,150)});
+$("#gq").addEventListener("input",drawGroups);
+$("#isbnin").addEventListener("keydown",e=>{if(e.key==="Enter")$("#isbngo").click()});
+$("#poscur").addEventListener("change",()=>K("pos",$("#poscur").value.trim()));
+document.addEventListener("visibilitychange",()=>{if(document.hidden)camStop()});
+
+// ================= AVVIO =================
+(async()=>{$("#poscur").value=K("pos")||"";
+ try{db=await idb();LIB=await dbAll();LIB.forEach(b=>BY[b.id]=b)}catch(e){toast("Impossibile aprire il database: "+esc(e.message),"err",8000)}
+ drawPos();drawWarn();
+ if(navigator.storage&&navigator.storage.persist){const p=await navigator.storage.persist().catch(()=>false);$("#persist").textContent=p?"Archivio protetto dalla pulizia automatica di iOS.":""}
+ Q.push(...LIB.filter(b=>!b.completo&&b.isbn).map(b=>b.id));runQ();
+ if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+})();
+</script>
+</body>
+</html>
